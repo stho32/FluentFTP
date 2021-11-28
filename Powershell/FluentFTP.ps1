@@ -25,52 +25,48 @@
 
 #>
 function Show-FtpFile {
-param(
-    [Parameter(Mandatory=$true)]
-    [string] $site,
-    [Parameter(Mandatory=$true)]
-    [string] $user,
-    [Parameter(Mandatory=$true)]
-    [string] $password,
-    [string] $ftpDirectory = "",
-    [Parameter(Mandatory=$true)]
-    [string] $ftpFileName
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $site,
+        [Parameter(Mandatory = $true)]
+        [string] $user,
+        [Parameter(Mandatory = $true)]
+        [string] $password,
+        [string] $ftpDirectory = "",
+        [Parameter(Mandatory = $true)]
+        [string] $ftpFileName
     )
-   try
-    {
+    try {
         
         # Load FluentFTP .NET assembly
         Add-Type -Path "$PSScriptRoot\FluentFTP.dll"
         # Setup session options
         $client = New-Object FluentFTP.FtpClient($site)
         $client.Credentials = New-Object System.Net.NetworkCredential($user, $password)
+        $client.ValidateAnyCertificate = $true;
         $client.AutoConnect()
-		if ($ftpDirectory -ne "")
-		{
-			$client.SetWorkingDirectory($ftpDirectory)
-		}          
-		$currentDirectory = $client.GetWorkingDirectory()
-        try
-        {
-            foreach ($item in $client.GetListing(""))
-            {
-				if ($item.Name -like $ftpFileName)
-				{
-					Write-Output "$item"
-				}
+
+        if ($ftpDirectory -ne "") {
+            $client.SetWorkingDirectory($ftpDirectory)
+        }
+
+        $currentDirectory = $client.GetWorkingDirectory()
+        try {
+            foreach ($item in $client.GetListing("")) {
+                if ($item.Name -like $ftpFileName) {
+                    Write-Output "$item"
+                }
             }
         }
-        finally
-        {
+        finally {
             # Disconnect, clean up
             $client.Disconnect()
         }
      
         
     }
-    catch
-    {
-        Write-Output $_.Exception|format-list -force
+    catch {
+        Write-Output $_.Exception | format-list -force
        
     }
 }
@@ -107,22 +103,21 @@ param(
 
 #>
 function Rename-FtpFile {
-param(
-    [Parameter(Mandatory=$true)]
-    [string] $site,
-    [Parameter(Mandatory=$true)]
-    [string] $user,
-    [Parameter(Mandatory=$true)]
-    [string] $password,
-    [string] $ftpDirectory = "",
-    [Parameter(Mandatory=$true)]
-    [string] $oldName,
-    [Parameter(Mandatory=$true)]
-    [string] $newName
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $site,
+        [Parameter(Mandatory = $true)]
+        [string] $user,
+        [Parameter(Mandatory = $true)]
+        [string] $password,
+        [string] $ftpDirectory = "",
+        [Parameter(Mandatory = $true)]
+        [string] $oldName,
+        [Parameter(Mandatory = $true)]
+        [string] $newName
     )
 
-    try
-    {
+    try {
         
         # Load FluentFTP .NET assembly
         Add-Type -Path "$PSScriptRoot\FluentFTP.dll"
@@ -131,45 +126,36 @@ param(
         $client.Credentials = New-Object System.Net.NetworkCredential($user, $password)
         $client.AutoConnect()
 
-        try
-        {
-            if ($ftpDirectory -ne "")
-            {
+        try {
+            if ($ftpDirectory -ne "") {
                 $client.SetWorkingDirectory($ftpDirectory)
             }          
             $currentDirectory = $client.GetWorkingDirectory()
-            if ($currentDirectory -match '/$')
-            {
+            if ($currentDirectory -match '/$') {
                 $oldPath = "$currentDirectory$oldName"
                 $newPath = "$currentDirectory$newName"
             }
-            else
-            {
+            else {
                 $oldPath = "$currentDirectory/$oldName"
                 $newPath = "$currentDirectory/$newName"
             }
-            if ($client.FileExists($oldPath))
-            {
+            if ($client.FileExists($oldPath)) {
                 $result = $client.Rename($oldPath, $newPath)
-                if ($result)
-                {
+                if ($result) {
                     Write-Output "$oldPath successfully renamed to $newPath"
                 }
             }
-            else
-            {
+            else {
                 Write-Output "$oldPath is not found on server"
             }
         }
-        finally
-        {
+        finally {
             # Disconnect, clean up
             $client.Disconnect()
         }    
     }
-    catch [Exception]
-    {
-      echo $_.Exception|format-list -force
+    catch [Exception] {
+        echo $_.Exception | format-list -force
       
     }
 }
@@ -202,83 +188,71 @@ param(
 
 #>
 function Send-FtpFile {
-param(
-    [Parameter(Mandatory=$true)]
-    [string] $site,
-    [Parameter(Mandatory=$true)]
-    [string] $user,
-    [Parameter(Mandatory=$true)]
-    [string] $password,
-    [string] $ftpdirectory = "",
-    [Parameter(Mandatory=$true)]
-    [string] $FtpFileName,
-    [switch] $binary = $false
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $site,
+        [Parameter(Mandatory = $true)]
+        [string] $user,
+        [Parameter(Mandatory = $true)]
+        [string] $password,
+        [string] $ftpdirectory = "",
+        [Parameter(Mandatory = $true)]
+        [string] $FtpFileName,
+        [switch] $binary = $false
     )
 
-    try
-    {
+    try {
         
         # Load FluentFTP .NET assembly
         Add-Type -Path "$PSScriptRoot\FluentFTP.dll"
         # Setup session options
         $client = New-Object FluentFTP.FtpClient($site)
         $client.Credentials = New-Object System.Net.NetworkCredential($user, $password)
-        if ($binary)
-        {
+        if ($binary) {
             $dataType = "Binary"
         }
-        else
-        {
+        else {
             $dataType = "ASCII"
         }
             
         $client.UploadDatatype = $dataType
         $client.AutoConnect()
-        if ($FtpFileName -notlike "*\*" )
-        {
+        if ($FtpFileName -notlike "*\*" ) {
             $FtpFileName = Join-path $pwd $FtpFileName
         }
         $lclFile = Split-Path $FtpFileName -leaf
         $lclDir = Split-Path $FtpFileName -Parent
-        try
-        {
-            if ($ftpdirectory -ne "")
-            {
+        try {
+            if ($ftpdirectory -ne "") {
                 $client.SetWorkingDirectory($ftpdirectory)
             }
             
             $currentDirectory = $client.GetWorkingDirectory()
             $wildFiles = [IO.Directory]::GetFiles($lclDir, $lclFile);
             $filesUploaded = $false
-            foreach ($filePath in $wildFiles)
-            {
+            foreach ($filePath in $wildFiles) {
                 $fileOnly = Split-Path $filePath -leaf 
-                if ($currentDirectory -match '/$')
-                {
+                if ($currentDirectory -match '/$') {
                     $ftpPath = "$currentDirectory$fileOnly"
                 }
-                else
-                {
+                else {
                     $ftpPath = "$currentDirectory/$fileOnly"
                 }
                 $result = $client.UploadFile($filePath, $ftpPath)
                 $filesUploaded = $true
                 Write-Output "$filePath successfully copied to $ftpPath"
             }
-            if (!$filesUploaded)
-            {
+            if (!$filesUploaded) {
                 Write-Output "No files matching $FtpFileName were found"
             }
         }
-        finally
-        {
+        finally {
             # Disconnect, clean up
             $client.Disconnect()
         }    
     }
-    catch [Exception]
-    {
-      echo $_.Exception|format-list -force
+    catch [Exception] {
+        echo $_.Exception | format-list -force
       
     }
 }
@@ -310,79 +284,67 @@ param(
 
 #>
 function Get-FtpFile {
-param(
-    [Parameter(Mandatory=$true)]
-    [string] $site,
-    [Parameter(Mandatory=$true)]
-    [string] $user,
-    [Parameter(Mandatory=$true)]
-    [string] $password,
-    [string] $ftpDirectory = "",
-    [Parameter(Mandatory=$true)]
-    [string] $ftpFileName,
-    [switch] $binary = $false
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $site,
+        [Parameter(Mandatory = $true)]
+        [string] $user,
+        [Parameter(Mandatory = $true)]
+        [string] $password,
+        [string] $ftpDirectory = "",
+        [Parameter(Mandatory = $true)]
+        [string] $ftpFileName,
+        [switch] $binary = $false
     )
 
-    try
-    {
+    try {
         
         # Load FluentFTP .NET assembly
         Add-Type -Path "$PSScriptRoot\FluentFTP.dll"
         # Setup session options
         $client = New-Object FluentFTP.FtpClient($site)
         $client.Credentials = New-Object System.Net.NetworkCredential($user, $password)
-        if ($binary)
-        {
+        if ($binary) {
             $dataType = "Binary"
         }
-        else
-        {
+        else {
             $dataType = "ASCII"
         }
             
         $client.DownloadDatatype = $dataType
         $client.AutoConnect()
 
-        try
-        {
-            if ($ftpdirectory -ne "")
-            {
+        try {
+            if ($ftpdirectory -ne "") {
                 $client.SetWorkingDirectory($ftpDirectory)
             }
             
             $currentDirectory = $client.GetWorkingDirectory()  
             $filesDownloaded = $false            
-            foreach ($item in $client.GetListing(""))
-            {
+            foreach ($item in $client.GetListing("")) {
                 $fileonly = $item.Name
                 $localFile = Join-path $pwd $fileOnly
-                if ($item.Name -like $ftpFileName)
-				{
-					if ($client.DownloadFile($localFile, $fileOnly))
-					{
+                if ($item.Name -like $ftpFileName) {
+                    if ($client.DownloadFile($localFile, $fileOnly)) {
                         $filesDownloaded = $true
-						Write-Output ("$fileOnly successfully downloaded to $localFile" )
-					}
-					else
-					{
-						Write-Output ("Unable to download $fileOnly to $localFile" )
-					}
-				}
+                        Write-Output ("$fileOnly successfully downloaded to $localFile" )
+                    }
+                    else {
+                        Write-Output ("Unable to download $fileOnly to $localFile" )
+                    }
+                }
             }
-            if (!$filesDownloaded)
-            {
+            if (!$filesDownloaded) {
                 Write-Output "Attempting to download files matching $ftpFileName. No files were found"
             }
         }    
-        finally
-        {
+        finally {
             # Disconnect, clean up
             $client.Disconnect()
         }            
     }
-    catch [Exception]
-    {
-      echo $_.Exception|format-list -force
+    catch [Exception] {
+        echo $_.Exception | format-list -force
       
     }
 }
@@ -414,20 +376,19 @@ param(
 
 #>
 function Remove-FtpFile {
-param(
-    [Parameter(Mandatory=$true)]
-    [string] $site,
-    [Parameter(Mandatory=$true)]
-    [string] $user,
-    [Parameter(Mandatory=$true)]
-    [string] $password,
-    [string] $ftpDirectory = "",
-    [Parameter(Mandatory=$true)]
-    [string] $ftpFileName
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $site,
+        [Parameter(Mandatory = $true)]
+        [string] $user,
+        [Parameter(Mandatory = $true)]
+        [string] $password,
+        [string] $ftpDirectory = "",
+        [Parameter(Mandatory = $true)]
+        [string] $ftpFileName
     )
 
-    try
-    {
+    try {
         
         # Load FluentFTP .NET assembly
         Add-Type -Path "$PSScriptRoot\FluentFTP.dll"
@@ -436,37 +397,157 @@ param(
         $client.Credentials = New-Object System.Net.NetworkCredential($user, $password)
         $client.AutoConnect()
 
-        try
-        {
-            if ($ftpDirectory -ne "")
-            {
+        try {
+            if ($ftpDirectory -ne "") {
                 $client.SetWorkingDirectory($ftpDirectory)
             }
             $filesDeleted = $false         
-            foreach ($item in $client.GetListing(""))
-            {
+            foreach ($item in $client.GetListing("")) {
                 $fileOnly = $item.Name
-				if ($fileonly -like $ftpFileName)
-				{
+                if ($fileonly -like $ftpFileName) {
                     $filesDeleted = $true
-					$success = $client.DeleteFile($fileOnly)
-					Write-Output "$fileOnly successfully deleted"
-				}
+                    $success = $client.DeleteFile($fileOnly)
+                    Write-Output "$fileOnly successfully deleted"
+                }
             }
-            if (!$filesDeleted)
-            {
+            if (!$filesDeleted) {
                 Write-Output "No files matching $ftpFileName were found on the FTP server"
             }
         }    
-        finally
-        {
+        finally {
             # Disconnect, clean up
             $client.Disconnect()
         }            
     }
-    catch [Exception]
-    {
-      echo $_.Exception|format-list -force
+    catch [Exception] {
+        echo $_.Exception | format-list -force
       
     }
 }
+
+<#
+ .Synopsis
+  Upload a folder to an FTP site using different techniques for synchronization
+
+ .Description
+  Connect to a FTP server and upload differences
+
+ .Parameter Site
+  The site to connect to.
+
+ .Parameter User
+  The user name.
+
+ .Parameter Password
+  Password associated with FTP site.
+
+ .Parameter FtpDirectory
+  The Directory on FTP server
+  
+  .Parameter FtpfileName
+  Filename to transfer
+  
+ .Example
+   # Mirror a local directory to an ftp directory (deletes additional files that might be on the ftp server but not on the local machine)
+   Sync-FtpDirectory -FromLocalDir C:\somestuff\ -ToSite ftp.site.com -User bob -Password secure -FtpDirectory pub -Method Mirror
+
+ .Example
+   # Only upload differences, add files that do not exist on the ftp but do not delete files
+   Sync-FtpDirectory -FromLocalDir C:\somestuff\ -ToSite ftp.site.com -User bob -Password secure -FtpDirectory pub -Method Update
+
+#>
+function Sync-FtpDirectory {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $fromLocalDir,
+        [Parameter(Mandatory = $true)]
+        [string] $toSite,
+        [Parameter(Mandatory = $true)]
+        [string] $user,
+        [Parameter(Mandatory = $true)]
+        [string] $password,
+        [Parameter(Mandatory = $true)]
+        [string] $ftpDirectory,
+
+        [ValidateSet("Update", "Mirror")]
+        [Parameter(Mandatory = $true)]
+        [string] $method
+    )
+
+    try {
+        # Load FluentFTP .NET assembly
+        Add-Type -Path "$PSScriptRoot\FluentFTP.dll"
+        # Setup session options
+        $client = New-Object FluentFTP.FtpClient($toSite, $user, $password)
+        $client.ValidateAnyCertificate = true;
+        $client.AutoConnect()
+
+        try {
+            if ($ftpdirectory -ne "") {
+                $client.SetWorkingDirectory($ftpDirectory)
+            }
+            
+            $methodAsEnum = [FluentFTP.FtpFolderSyncMode]::Update
+            if ($method -eq "Mirror") {
+                $methodAsEnum = [FluentFTP.FtpFolderSyncMode]::Mirror
+            }
+            $client.UploadDirectory($fromLocalDir, $ftpDirectory, $methodAsEnum)
+        }    
+        finally {
+            # Disconnect, clean up
+            $client.Disconnect()
+        }            
+    }
+    catch [Exception] {
+        echo $_.Exception | format-list -force
+      
+    }
+}
+
+<#
+ .Synopsis
+  Get connection profiles
+
+ .Description
+  Automatically detect ways to connect and list them
+
+ .Parameter Site
+  The site to connect to.
+
+ .Parameter User
+  The user name.
+
+ .Parameter Password
+  Password associated with FTP site.
+
+ .Example
+   Get-FtpConnectionOptions -site somesite.com -user username -password password
+
+#>
+function Get-FtpConnectionOptions {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $site,
+        [Parameter(Mandatory = $true)]
+        [string] $user,
+        [Parameter(Mandatory = $true)]
+        [string] $password
+    )
+
+    try {
+        # Load FluentFTP .NET assembly
+        Add-Type -Path "$PSScriptRoot\FluentFTP.dll"
+        # Setup session options
+        $client = New-Object FluentFTP.FtpClient($site, $user, $password)
+        $client.ValidateAnyCertificate = true;
+        $profiles = $client.AutoDetect()
+
+        $profiles | ForEach-Object {
+            Write-Output $_.ToCode()
+        }
+    }
+    catch [Exception] {
+        echo $_.Exception | format-list -force
+    }  
+}
+
